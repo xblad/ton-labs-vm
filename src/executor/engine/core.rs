@@ -41,6 +41,7 @@ pub struct Engine {
     pub(in crate::executor) cmd: Instruction,
     pub(in crate::executor) ctrls: SaveList,
     pub(in crate::executor) libraries: Vec<HashmapE>, // 256 bit dictionaries
+    pub(in crate::executor) modifiers: BehaviorModifiers,
     visited_cells: HashSet<UInt256>,
     cstate: CommittedState,
     handlers: Handlers,
@@ -54,6 +55,11 @@ pub struct Engine {
     trace: u8,
     trace_callback: Option<Box<dyn Fn(&Engine, &EngineTraceInfo)>>,
     log_string: Option<&'static str>,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct BehaviorModifiers {
+    pub chksig_always_succeed: bool
 }
 
 #[derive(Eq, Debug, PartialEq)]
@@ -166,6 +172,7 @@ impl Engine {
             cmd: Instruction::new("NOP"),
             ctrls: SaveList::new(),
             libraries: Vec::new(),
+            modifiers: Default::default(),
             visited_cells: HashSet::new(),
             cstate: CommittedState::new_empty(),
             handlers: Handlers::new_code_page_0(),
@@ -596,6 +603,10 @@ impl Engine {
 
     pub fn set_trace_callback(&mut self, callback: impl Fn(&Engine, &EngineTraceInfo) + 'static) {
         self.trace_callback = Some(Box::new(callback));
+    }
+
+    pub fn modify_behavior(&mut self, modifiers: BehaviorModifiers) {
+        self.modifiers = modifiers;
     }
 
     fn trace_bit(&self, trace_mask: u8) -> bool {

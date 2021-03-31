@@ -110,7 +110,7 @@ pub(super) fn execute_chksigns(engine: &mut Engine) -> Failure {
             ).map_err(|_| exception!(ExceptionCode::FatalError))?;
 
             let data = ctx.engine.cmd.var(2).as_slice()?.get_bytestring(0);
-            let result = pub_key.verify(&data, &signature).is_ok();
+            let result = ctx.engine.modifiers.chksig_always_succeed || pub_key.verify(&data, &signature).is_ok();
             ctx.engine.cc.stack.push(boolean!(result));
             Ok(ctx)
         })
@@ -134,17 +134,17 @@ pub(super) fn execute_chksignu(engine: &mut Engine) -> Failure {
             }
             let signature = ctx.engine.cmd.var(1).as_slice()?.get_bytestring(0);
 
-            let mut result = false;
+            let mut result = ctx.engine.modifiers.chksig_always_succeed;
             if let Ok(signature) = ed25519::Signature::from_bytes(&signature[..SIGNATURE_BYTES]) {
                 if let Ok(pub_key) = ed25519_dalek::PublicKey::from_bytes(&pub_key.data()) {
-                    result = pub_key.verify(hash.data(), &signature).is_ok();
+                    result |= pub_key.verify(hash.data(), &signature).is_ok();
                 }
             }
             ctx.engine.cc.stack.push(boolean!(result));
             Ok(ctx)
         })
         .err()
-}       
+}
 
 fn hash_to_uint<T: AsRef<[u8]>>(bits: T) -> Arc<IntegerData> {
     Arc::new(UnsignedIntegerBigEndianEncoding::new(256)
