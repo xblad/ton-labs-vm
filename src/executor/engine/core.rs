@@ -605,6 +605,10 @@ impl Engine {
         self.trace_callback = Some(Box::new(callback));
     }
 
+    pub fn behavior_modifiers(&self) -> &BehaviorModifiers {
+        &self.modifiers
+    }
+
     pub fn modify_behavior(&mut self, modifiers: BehaviorModifiers) {
         self.modifiers = modifiers;
     }
