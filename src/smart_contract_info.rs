@@ -114,12 +114,12 @@ impl SmartContractInfo{
         // combine all parameters to vec and calculate hash of them
         let v = self.trans_lt.to_be_bytes();
         let mut hasher = sha2::Sha256::new();
-        hasher.input(rand_seed_block.as_slice());
-        hasher.input(self.myself.cell().repr_hash().as_slice());
-        hasher.input(in_msg_hash.as_slice());
-        hasher.input(&v);
+        hasher.update(rand_seed_block.as_slice());
+        hasher.update(self.myself.cell().repr_hash().as_slice());
+        hasher.update(in_msg_hash.as_slice());
+        hasher.update(&v);
 
-        let sha256 = hasher.result();
+        let sha256 = hasher.finalize();
         self.rand_seed = UnsignedIntegerBigEndianEncoding::new(256)
             .deserialize(&sha256);
     }

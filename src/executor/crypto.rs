@@ -76,8 +76,8 @@ pub(super) fn execute_sha256u(engine: &mut Engine) -> Failure {
             let slice = ctx.engine.cmd.var(0).as_slice()?;
             if slice.remaining_bits() % 8 == 0 {
                 let mut hasher = sha2::Sha256::new();
-                hasher.input(slice.get_bytestring(0));
-                let hash_int = hash_to_uint(hasher.result());
+                hasher.update(slice.get_bytestring(0));
+                let hash_int = hash_to_uint(hasher.finalize());
                 ctx.engine.cc.stack.push(StackItem::Integer(hash_int));
                 Ok(ctx)
             }else {
