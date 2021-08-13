@@ -176,7 +176,7 @@ impl IntegerData {
         utils::process_value(&self, |value| {
             debug_assert!(!value.is_negative());
             value.bits()
-        })
+        } as usize)
     }
 }
 
@@ -310,15 +310,15 @@ pub mod utils {
         }
         let res = value.bits();
         if value.is_positive() {
-            return res + 1;
+            return (res + 1) as usize;
         }
         // For negative values value.bits() returns correct result only when value is power of 2.
         let mut modpow2 = value.abs();
         modpow2 &= &modpow2 - 1;
         if modpow2.is_zero() {
-            return res;
+            return res as usize;
         }
-        res + 1
+        (res + 1) as usize
     }
 
     /// Perform in-place two's complement of the given digit iterator

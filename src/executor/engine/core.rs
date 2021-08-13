@@ -1063,7 +1063,7 @@ impl Engine {
 
     // raises the exception and tries to dispatch it via c(2).
     // If c(2) is not set, returns that exception, otherwise, returns None
-    fn raise_exception(&mut self, err_opt: Option<failure::Error>, _undo: bool) -> Status {
+    fn raise_exception(&mut self, err_opt: Option<anyhow::Error>, _undo: bool) -> Status {
         let (err, exception) = if let Some(err) = err_opt {
             if let Some(exception) = tvm_exception_full(&err) {
                 (err, exception)

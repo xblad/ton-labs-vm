@@ -53,7 +53,7 @@ pub(crate) fn execute_rand(engine: &mut Engine) -> Failure {
         hasher.update(ctx.engine.rand()?
             .into_builder::<UnsignedIntegerBigEndianEncoding>(256)?.data());
         let sha512 = hasher.finalize();
-        let rand = ctx.engine.cmd.var(0).as_integer()?.take_value_of(|value|
+        let rand: num::BigInt = ctx.engine.cmd.var(0).as_integer()?.take_value_of(|value|
             Some(
                 num::BigInt::from_bytes_be(
                     num::bigint::Sign::Plus, &sha512[32..]) * value >> 256

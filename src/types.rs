@@ -203,7 +203,7 @@ impl fmt::Debug for Exception {
 }
 
 // pub(crate) use ton_types::Result;
-pub(crate) type Failure = Option<failure::Error>;
+pub(crate) type Failure = Option<anyhow::Error>;
 pub(crate) type ResultMut<'a, T> = Result<&'a mut T>;
 pub(crate) type ResultOpt<T> = Result<Option<T>>;
 pub(crate) type ResultRef<'a, T> = Result<&'a T>;

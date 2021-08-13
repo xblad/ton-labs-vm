@@ -230,7 +230,7 @@ pub mod utils {
         // -5 / 2  ->  -2, -1  ->  -2, -1
         //  5 /-2  ->  -2,  1  ->  -2,  1
         // -5 /-2  ->   2, -1  ->   3,  1
-        let r_x2 = remainder.clone() << 1;
+        let r_x2: Int = remainder.clone() << 1;
         let cmp_result = r_x2.abs().cmp(&divisor.abs());
         let is_not_negative = dividend.sign() == divisor.sign();
         if cmp_result == Ordering::Greater

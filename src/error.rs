@@ -14,29 +14,29 @@
 use ton_types::{error, fail, Result, ExceptionCode};
 use crate::{types::Exception};
 
-#[derive(Debug, failure::Fail)]
+#[derive(Debug, thiserror::Error)]
 pub enum TvmError {
     /// Fatal error.
-    #[fail(display = "Fatal error: {}", 0)]
+    #[error( "Fatal error: {}", 0)]
     FatalError(String),
     /// Invalid argument.
-    #[fail(display = "Invalid argument: {}", 0)]
+    #[error( "Invalid argument: {}", 0)]
     InvalidArg(usize),
     /// Invalid data.
-    #[fail(display = "Invalid data: {}", 0)]
+    #[error( "Invalid data: {}", 0)]
     InvalidData(String),
     /// Invalid operation.
-    #[fail(display = "Invalid operation: {}", 0)]
+    #[error( "Invalid operation: {}", 0)]
     InvalidOperation(String),
     /// TVM Exception
-    #[fail(display = "VM Exception, code: {}", 0)]
+    #[error( "VM Exception, code: {}", 0)]
     TvmException(ExceptionCode),
     /// TVM Exception description
-    #[fail(display = "VM Exception: {} {}", 0, 1)]
+    #[error( "VM Exception: {} {}", 0, 1)]
     TvmExceptionFull(Exception, String),
 }
 
-pub fn tvm_exception(err: failure::Error) -> Result<Exception> {
+pub fn tvm_exception(err: anyhow::Error) -> Result<Exception> {
     match err.downcast::<TvmError>() {
         Ok(TvmError::TvmExceptionFull(err, _)) => Ok(err),
         Ok(TvmError::TvmException(err)) => Ok(Exception::from(err)),
@@ -49,7 +49,7 @@ pub fn tvm_exception(err: failure::Error) -> Result<Exception> {
     }
 }
 
-pub fn tvm_exception_code(err: &failure::Error) -> Option<ExceptionCode> {
+pub fn tvm_exception_code(err: &anyhow::Error) -> Option<ExceptionCode> {
     match err.downcast_ref::<TvmError>() {
         Some(TvmError::TvmExceptionFull(err, _)) => err.exception_code(),
         Some(TvmError::TvmException(err)) => Some(*err),
@@ -62,7 +62,7 @@ pub fn tvm_exception_code(err: &failure::Error) -> Option<ExceptionCode> {
     }
 }
 
-pub fn tvm_exception_or_custom_code(err: &failure::Error) -> i32 {
+pub fn tvm_exception_or_custom_code(err: &anyhow::Error) -> i32 {
     match err.downcast_ref::<TvmError>() {
         Some(TvmError::TvmExceptionFull(err, _)) => err.exception_or_custom_code(),
         Some(TvmError::TvmException(err)) => *err as i32,
@@ -75,7 +75,7 @@ pub fn tvm_exception_or_custom_code(err: &failure::Error) -> i32 {
     }
 }
 
-pub fn tvm_exception_full(err: &failure::Error) -> Option<Exception> {
+pub fn tvm_exception_full(err: &anyhow::Error) -> Option<Exception> {
     match err.downcast_ref::<TvmError>() {
         Some(TvmError::TvmExceptionFull(err, _)) => Some(err.clone()),
         Some(TvmError::TvmException(err)) => Some(Exception::from_code(*err, file!(), line!())),
