@@ -30,6 +30,7 @@ use crate::{
     }
 };
 use std::sync::Arc;
+use smallvec::smallvec;
 use ton_types::{
     BuilderData, Cell, error, GasConsumer, IBitstring, Result, SliceData, 
     types::ExceptionCode,
@@ -57,7 +58,7 @@ pub(super) fn execute_changelib(engine: &mut Engine) -> Failure {
     .and_then(|ctx| {
         let x = ctx.engine.cmd.var(0).as_integer()?.into(0..=2)? as u8;
         let hash = ctx.engine.cmd.var(1).as_integer()?.into_builder::<UnsignedIntegerBigEndianEncoding>(256)?;
-        let mut suffix = BuilderData::with_raw(vec![x * 2], 8)?;
+        let mut suffix = BuilderData::with_raw(smallvec![x * 2], 8)?;
         suffix.append_builder(&hash)?;
         add_action(ctx, ACTION_CHANGE_LIB, None, suffix)
     })
@@ -72,7 +73,7 @@ pub(super) fn execute_sendrawmsg(engine: &mut Engine) -> Failure {
     .and_then(|ctx| {
         let x = ctx.engine.cmd.var(0).as_integer()?.into(0..=255)?;
         let cell = ctx.engine.cmd.var(1).as_cell()?.clone();
-        let suffix = BuilderData::with_raw(vec![x], 8)?;
+        let suffix = BuilderData::with_raw(smallvec![x], 8)?;
         add_action(ctx, ACTION_SEND_MSG, Some(cell), suffix)
     })
     .err()
@@ -96,7 +97,7 @@ pub(super) fn execute_setlibcode(engine: &mut Engine) -> Failure {
     .and_then(|ctx| {
         let x = ctx.engine.cmd.var(0).as_integer()?.into(0..=2)? as u8;
         let cell = ctx.engine.cmd.var(1).as_cell()?.clone();
-        add_action(ctx, ACTION_CHANGE_LIB, Some(cell), BuilderData::with_raw(vec![x * 2 + 1], 8)?)
+        add_action(ctx, ACTION_CHANGE_LIB, Some(cell), BuilderData::with_raw(smallvec![x * 2 + 1], 8)?)
     })
     .err()
 }
@@ -107,7 +108,7 @@ pub(super) fn execute_rawreserve(engine: &mut Engine) -> Failure {
     .and_then(|ctx| fetch_stack(ctx, 2))
     .and_then(|ctx| {
         let y = ctx.engine.cmd.var(0).as_integer()?.into(0..=15)?;
-        let mut suffix = BuilderData::with_raw(vec![y], 8)?;
+        let mut suffix = BuilderData::with_raw(smallvec![y], 8)?;
         let x = ctx.engine.cmd.var(1).as_grams()?;
         suffix.append_builder(&serialize_currency_collection(x, None)?)?;
         add_action(ctx, ACTION_RESERVE, None, suffix)
@@ -121,7 +122,7 @@ pub(super) fn execute_rawreservex(engine: &mut Engine) -> Failure {
     .and_then(|ctx| fetch_stack(ctx, 3))
     .and_then(|ctx| {
         let y = ctx.engine.cmd.var(0).as_integer()?.into(0..=15)?;
-        let mut suffix = BuilderData::with_raw(vec![y], 8)?;
+        let mut suffix = BuilderData::with_raw(smallvec![y], 8)?;
         let other = ctx.engine.cmd.var(1).as_dict()?;
         let x = ctx.engine.cmd.var(2).as_grams()?;
         suffix.append_builder(&serialize_currency_collection(x, other.cloned())?)?;

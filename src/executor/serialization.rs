@@ -31,6 +31,7 @@ use crate::{
     },
     types::{Exception, Failure}
 };
+use smallvec::smallvec;
 use ton_types::{BuilderData, CellType, GasConsumer, error, IBitstring, Result, ExceptionCode, MAX_LEVEL};
 use std::sync::Arc;
 
@@ -249,7 +250,7 @@ fn store_r(engine: &mut Engine, name: &'static str, how: u8) -> Failure {
             x = ctx.engine.cmd.var(1).as_cell()?;
             0
         };
-        let x = BuilderData::with_raw_and_refs(vec![], 0, vec![x.clone()])
+        let x = BuilderData::with_raw_and_refs(smallvec![], 0, vec![x.clone()])
             .map_err(|err| err.into());
         store_data(ctx, b, x, how.bit(QUIET), false)
     })
@@ -293,7 +294,7 @@ fn store_br(engine: &mut Engine, name: &'static str, how: u8) -> Failure {
             x = ctx.engine.cmd.var(1).as_builder()?;
             0
         };
-        let x = BuilderData::with_raw_and_refs(vec![], 0, vec![x.into()])
+        let x = BuilderData::with_raw_and_refs(smallvec![], 0, vec![x.into()])
             .map_err(|err| err.into());
         store_data(ctx, b, x, how.bit(QUIET), true)
     })
@@ -351,8 +352,8 @@ pub(crate) fn execute_stdict(engine: &mut Engine) -> Failure {
     .and_then(|ctx| {
         ctx.engine.cmd.var(0).as_builder()?;
         let x = match ctx.engine.cmd.var(1).as_dict()? {
-            Some(x) => BuilderData::with_raw_and_refs(vec![0xC0], 1, vec![x.clone()]),
-            None => BuilderData::with_raw(vec![0x40], 1)
+            Some(x) => BuilderData::with_raw_and_refs(smallvec![0xC0], 1, vec![x.clone()]),
+            None => BuilderData::with_raw(smallvec![0x40], 1)
         };
         store_data(ctx, 0, x.map_err(|err| err.into()), false, false)
     })

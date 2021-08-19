@@ -19,6 +19,7 @@ use crate::stack::{
     }, 
     serialization::{Serializer, Deserializer}
 };
+use smallvec::SmallVec;
 use ton_types::{error, Result, types::ExceptionCode, fail};
 
 pub struct UnsignedIntegerBigEndianEncoding {
@@ -52,7 +53,7 @@ impl Serializer<IntegerData> for UnsignedIntegerBigEndianEncoding {
         let mut buffer = value.to_bytes_be();
         buffer = extend_buffer_be(buffer, self.length_in_bits, false);
 
-        BuilderData::with_raw(buffer, self.length_in_bits)
+        BuilderData::with_raw(SmallVec::from_vec(buffer), self.length_in_bits)
     }
 }
 

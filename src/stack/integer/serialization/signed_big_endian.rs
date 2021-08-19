@@ -21,6 +21,7 @@ use crate::stack::{
 };
 use num::bigint::ToBigInt;
 use num_traits::Signed;
+use smallvec::SmallVec;
 use ton_types::{error, Result, types::ExceptionCode, fail};
 
 pub struct SignedIntegerBigEndianEncoding {
@@ -54,7 +55,7 @@ impl Serializer<IntegerData> for SignedIntegerBigEndianEncoding {
         let mut buffer = value.to_signed_bytes_be();
         buffer = extend_buffer_be(buffer, self.length_in_bits, value.is_negative());
 
-        BuilderData::with_raw(buffer, self.length_in_bits)
+        BuilderData::with_raw(SmallVec::from_vec(buffer), self.length_in_bits)
     }
 }
 

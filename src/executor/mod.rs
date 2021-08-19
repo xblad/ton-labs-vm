@@ -36,6 +36,7 @@ mod config;
 mod rand;
 
 pub use engine::{Engine, BehaviorModifiers, EngineTraceInfo, EngineTraceInfoType};
+use smallvec::smallvec;
 use ton_types::{BuilderData, Cell, IBitstring, Result};
 
 
@@ -62,7 +63,7 @@ impl Mask for u8 {
 
 fn serialize_grams(grams: u128) -> Result<BuilderData> {
     let bytes = 16 - grams.leading_zeros() as usize / 8;
-    let mut builder = BuilderData::with_raw(vec!((bytes as u8) << 4), 4)?;
+    let mut builder = BuilderData::with_raw(smallvec!((bytes as u8) << 4), 4)?;
     builder.append_raw(&grams.to_be_bytes()[16 - bytes..], bytes * 8)?;
     Ok(builder)
 }

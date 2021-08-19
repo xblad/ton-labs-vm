@@ -16,6 +16,7 @@ use crate::stack::{
     integer::{IntegerData, serialization::{Encoding, common::bits_to_bytes}}, 
     serialization::{Serializer, Deserializer}
 };
+use smallvec::SmallVec;
 use ton_types::{error, Result, types::ExceptionCode, fail};
 
 pub struct UnsignedIntegerLittleEndianEncoding {
@@ -45,7 +46,7 @@ impl Serializer<IntegerData> for UnsignedIntegerLittleEndianEncoding {
         debug_assert!(expected_buffer_size >= buffer.len());
         buffer.resize(expected_buffer_size, 0);
 
-        BuilderData::with_raw(buffer, self.length_in_bits)
+        BuilderData::with_raw(SmallVec::from_vec(buffer), self.length_in_bits)
     }
 }
 

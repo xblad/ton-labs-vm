@@ -30,6 +30,7 @@ use crate::{
     },
     types::{Exception, Failure}
 };
+use smallvec::smallvec;
 use ton_types::{
     BuilderData, Cell, CellType, error, GasConsumer, Result, SliceData, types::{ExceptionCode, UInt256}
 };
@@ -469,7 +470,7 @@ fn sdcut(ctx: Ctx, bits: u8, refs: u8) -> Result<Ctx> {
         FROM_SIZE => slice.shrink_references(r0..r0 + r1),
         LAST => slice.shrink_references(refs_count - r0..),
         NOT_LAST => slice.shrink_references(..refs_count - r0),
-        _ => vec![]
+        _ => smallvec![]
     };
     match bits {
         FROM => slice.shrink_data(l0..),

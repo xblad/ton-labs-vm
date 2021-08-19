@@ -34,6 +34,7 @@ num-traits = "^0.2.8"
 rand = "0.7.2"
 sha2 = "0.9"
 thiserror = "1.0.26"
+smallvec = { version = "1.6.1", features = ["const_generics", "union", "write"] }
 
 [features]
 sha-asm = ["sha2/asm"]
