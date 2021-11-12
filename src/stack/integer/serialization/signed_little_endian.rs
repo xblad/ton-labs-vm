@@ -12,14 +12,14 @@
 */
 
 use crate::stack::{
-    BuilderData, 
+    BuilderData,
     integer::{IntegerData, serialization::{Encoding, common::extend_buffer_le}},
     serialization::{Serializer, Deserializer}
 };
 use num::bigint::ToBigInt;
 use num_traits::Signed;
 use smallvec::SmallVec;
-use ton_types::{error, Result, types::ExceptionCode, fail};
+use ton_types::{Result, types::ExceptionCode, fail};
 
 pub struct SignedIntegerLittleEndianEncoding {
     length_in_bits: usize

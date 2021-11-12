@@ -12,16 +12,16 @@
 */
 
 use crate::{
-    error::TvmError, 
+    error::TvmError,
     stack::integer::{
+        utils::{check_overflow, twos_complement},
         Int, IntegerData, IntegerValue,
-        utils::{check_overflow, twos_complement}
     },
-    types::Exception
+    types::Exception,
 };
 use num_traits::Num;
 use std::ops::RangeInclusive;
-use ton_types::{error, Result, types::ExceptionCode};
+use ton_types::{error, types::ExceptionCode, Result};
 
 impl IntegerData {
     /// Constructs new IntegerData from u32 in a fastest way.
@@ -31,9 +31,7 @@ impl IntegerData {
             return Self::zero();
         }
         IntegerData {
-            value: IntegerValue::Value(
-                Int::new(num::bigint::Sign::Plus, vec![value])
-            )
+            value: IntegerValue::Value(Int::new(num::bigint::Sign::Plus, vec![value])),
         }
     }
 
@@ -44,14 +42,14 @@ impl IntegerData {
             return Self::zero();
         }
         IntegerData {
-            value: IntegerValue::Value(
-                Int::new(
-                    if value < 0 {
-                        num::bigint::Sign::Minus
-                    } else {
-                        num::bigint::Sign::Plus
-                    }, vec![value.abs() as u32])
-            )
+            value: IntegerValue::Value(Int::new(
+                if value < 0 {
+                    num::bigint::Sign::Minus
+                } else {
+                    num::bigint::Sign::Plus
+                },
+                vec![value.abs() as u32],
+            )),
         }
     }
 
@@ -59,9 +57,7 @@ impl IntegerData {
     #[inline]
     pub fn from_u64(value: u64) -> IntegerData {
         IntegerData {
-            value: IntegerValue::Value(
-                Int::from(value)
-            )
+            value: IntegerValue::Value(Int::from(value)),
         }
     }
 
@@ -69,9 +65,7 @@ impl IntegerData {
     #[inline]
     pub fn from_i64(value: i64) -> IntegerData {
         IntegerData {
-            value: IntegerValue::Value(
-                Int::from(value)
-            )
+            value: IntegerValue::Value(Int::from(value)),
         }
     }
 
@@ -79,9 +73,7 @@ impl IntegerData {
     #[inline]
     pub fn from_u128(value: u128) -> IntegerData {
         IntegerData {
-            value: IntegerValue::Value(
-                Int::from(value)
-            )
+            value: IntegerValue::Value(Int::from(value)),
         }
     }
 
@@ -89,22 +81,21 @@ impl IntegerData {
     #[inline]
     pub fn from_i128(value: i128) -> IntegerData {
         IntegerData {
-            value: IntegerValue::Value(
-                Int::from(value)
-            )
+            value: IntegerValue::Value(Int::from(value)),
         }
     }
 
     /// Constructs new IntegerData value from the given one of another supported type.
     #[inline]
-    pub fn from<T: Into<Int>>(value: T) -> Result<IntegerData> {
-        let bigint: Int = value.into();
-        if !check_overflow(&bigint) {
-            return err!(ExceptionCode::IntegerOverflow);
+    pub fn from(value: impl Into<Int>) -> Result<IntegerData> {
+        let bigint = value.into();
+        match check_overflow(&bigint) {
+            true => {
+                let value = IntegerValue::Value(bigint);
+                Ok(IntegerData { value })
+            }
+            false => err!(ExceptionCode::IntegerOverflow),
         }
-        Ok(IntegerData {
-            value: IntegerValue::Value(bigint)
-        })
     }
 
     /// Constructs new IntegerData value from the little-endian slice of u32
@@ -112,7 +103,7 @@ impl IntegerData {
     #[inline]
     pub fn from_vec_le_unchecked(sign: num::bigint::Sign, digits: Vec<u32>) -> IntegerData {
         IntegerData {
-            value: IntegerValue::Value(Int::new(sign, digits))
+            value: IntegerValue::Value(Int::new(sign, digits)),
         }
     }
 
@@ -125,13 +116,8 @@ impl IntegerData {
             return err!(ExceptionCode::IntegerOverflow);
         }
         Ok(IntegerData {
-            value: IntegerValue::Value(bigint)
+            value: IntegerValue::Value(bigint),
         })
-    }
-
-    /// Parses string literal using radix 10 and constructs new IntegerData.
-    pub fn from_str(literal: &str) -> Result<IntegerData> {
-        Self::from_str_radix(literal, 10)
     }
 
     /// Parses string literal with given radix and constructs new IntegerData.
@@ -145,17 +131,16 @@ impl IntegerData {
     /// Returns value converted into given type with range checking.
     pub fn into<T>(&self, range: RangeInclusive<T>) -> Result<T>
     where
-        T: PartialOrd + std::fmt::Display + FromInt
+        T: PartialOrd + std::fmt::Display + FromInt,
     {
         match self.value {
             IntegerValue::NaN => err!(ExceptionCode::RangeCheckError),
-            IntegerValue::Value(ref value) => T::from_int(value)
-                .and_then(|ret| {
-                    if *range.start() > ret || *range.end() < ret {
-                        return err!(ExceptionCode::RangeCheckError);
-                    }
-                    Ok(ret)
-                })
+            IntegerValue::Value(ref value) => T::from_int(value).and_then(|ret| {
+                if *range.start() > ret || *range.end() < ret {
+                    return err!(ExceptionCode::RangeCheckError);
+                }
+                Ok(ret)
+            }),
         }
     }
 
@@ -166,12 +151,19 @@ impl IntegerData {
             IntegerValue::NaN => err!(ExceptionCode::IntegerOverflow),
             IntegerValue::Value(ref value) => {
                 if let Some(value) = convert(value) {
-                    return Ok(value);
+                    Ok(value)
                 } else {
-                    return err!(ExceptionCode::RangeCheckError);
+                    err!(ExceptionCode::RangeCheckError)
                 }
             }
         }
+    }
+}
+
+impl std::str::FromStr for IntegerData {
+    type Err = anyhow::Error;
+    fn from_str(s: &str) -> Result<Self> {
+        Self::from_str_radix(s, 10)
     }
 }
 
@@ -183,7 +175,7 @@ impl IntegerData {
     ///  is l + 4 bytes or n + 13 = 8l + 32 bits."
     pub fn from_big_endian_octet_stream<F>(mut get_next_byte: F) -> Result<IntegerData>
     where
-        F: FnMut() -> Result<u8>
+        F: FnMut() -> Result<u8>,
     {
         let first_byte = get_next_byte()?;
         let byte_len = ((first_byte & 0b11111000u8) as usize >> 3) + 3;
@@ -281,7 +273,7 @@ macro_rules! auto_from_int {
     }
 }
 
-auto_from_int!{
+auto_from_int! {
     u8: to_u8,
     i8: to_i8,
     u16: to_u16,

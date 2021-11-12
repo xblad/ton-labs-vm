@@ -18,7 +18,7 @@
 edition = "2018"
 build = "build.rs"
 name = "ton_vm"
-version = "1.0.0"
+version = "1.8.20"
 
 [dependencies]
 ton_types = { git = "https://github.com/broxus/ton-labs-types.git" }
@@ -28,6 +28,7 @@ anyhow = "1"
 ed25519 = "1.2"
 ed25519-dalek = { git = "https://github.com/broxus/ed25519-dalek.git" }
 hex = "0.4"
+lazy_static = "1.4"
 log = "0.4.8"
 num = "0.3"
 num-traits = "^0.2.8"

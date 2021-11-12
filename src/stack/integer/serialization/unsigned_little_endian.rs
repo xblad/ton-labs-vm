@@ -12,12 +12,12 @@
 */
 
 use crate::stack::{
-    BuilderData, 
-    integer::{IntegerData, serialization::{Encoding, common::bits_to_bytes}}, 
+    BuilderData,
+    integer::{IntegerData, serialization::{Encoding, common::bits_to_bytes}},
     serialization::{Serializer, Deserializer}
 };
 use smallvec::SmallVec;
-use ton_types::{error, Result, types::ExceptionCode, fail};
+use ton_types::{Result, types::ExceptionCode, fail};
 
 pub struct UnsignedIntegerLittleEndianEncoding {
     length_in_bits: usize
@@ -55,7 +55,7 @@ impl Deserializer<IntegerData> for UnsignedIntegerLittleEndianEncoding {
         debug_assert!(data.len() * 8 >= self.length_in_bits);
 
         let value = num::BigInt::from_bytes_le(num::bigint::Sign::Plus, data);
-        IntegerData::from(value).unwrap_or(IntegerData::zero())
+        IntegerData::from(value).unwrap_or_default()
     }
 }
 

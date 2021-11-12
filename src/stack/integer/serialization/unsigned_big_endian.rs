@@ -12,15 +12,15 @@
 */
 
 use crate::stack::{
-    BuilderData, 
+    BuilderData,
     integer::{
-        IntegerData, 
+        IntegerData,
         serialization::{Encoding, common::{calc_excess_bits, extend_buffer_be}}
-    }, 
+    },
     serialization::{Serializer, Deserializer}
 };
 use smallvec::SmallVec;
-use ton_types::{error, Result, types::ExceptionCode, fail};
+use ton_types::{Result, types::ExceptionCode, fail};
 
 pub struct UnsignedIntegerBigEndianEncoding {
     length_in_bits: usize
