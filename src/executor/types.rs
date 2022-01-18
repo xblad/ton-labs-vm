@@ -1,5 +1,5 @@
 /*
-* Copyright 2018-2020 TON DEV SOLUTIONS LTD.
+* Copyright (C) 2019-2021 TON Labs. All Rights Reserved.
 *
 * Licensed under the SOFTWARE EVALUATION License (the "License"); you may not use
 * this file except in compliance with the License.
@@ -20,7 +20,6 @@ use ton_types::{error, Result, SliceData};
 
 #[derive(Debug)]
 pub(super) struct Context {
-    pub(super) exceptions_off: bool,
     pub(super) params: Vec<InstructionParameter>
 }
 
@@ -194,7 +193,6 @@ impl Instruction {
             name_prefix: None,
             opts: None,
             ictx: Context {
-                exceptions_off: false,
                 params: Vec::new()
             },
             vars: Vec::new(),

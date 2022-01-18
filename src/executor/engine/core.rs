@@ -1,5 +1,5 @@
 /*
-* Copyright 2018-2020 TON DEV SOLUTIONS LTD.
+* Copyright (C) 2019-2021 TON Labs. All Rights Reserved.
 *
 * Licensed under the SOFTWARE EVALUATION License (the "License"); you may not use
 * this file except in compliance with the License.
@@ -44,7 +44,6 @@ pub struct Engine {
     pub(in crate::executor) modifiers: BehaviorModifiers,
     visited_cells: HashSet<UInt256>,
     cstate: CommittedState,
-    handlers: Handlers,
     time: u64,
     gas: Gas,
     code_page: isize,
@@ -55,6 +54,7 @@ pub struct Engine {
     trace: u8,
     trace_callback: Option<Box<dyn Fn(&Engine, &EngineTraceInfo)>>,
     log_string: Option<&'static str>,
+    pub version: usize,
 }
 
 impl Default for Engine {
@@ -191,7 +191,6 @@ impl Engine {
             modifiers: Default::default(),
             visited_cells: HashSet::new(),
             cstate: CommittedState::new_empty(),
-            handlers: HANDLERS_CP0.clone(),
             time: 0,
             gas: Gas::empty(),
             code_page: 0,
@@ -202,6 +201,17 @@ impl Engine {
             trace,
             trace_callback,
             log_string: None,
+            version: 2,
+        }
+    }
+
+    pub fn set_version(&mut self, version: usize) -> Status {
+        let versions = [1, 2];
+        if versions.contains(&version) {
+            self.version = version;
+            Ok(())
+        } else {
+            Err(error!("internal error: version is not available"))
         }
     }
 
@@ -369,7 +379,7 @@ impl Engine {
             let gas = self.gas_used();
             self.cmd_code = self.cc.code().clone();
             self.cmd = Instruction::new("");
-            let execution_result = match self.handlers.get_handler(&mut self.cc) {
+            let execution_result = match HANDLERS_CP0.get_handler(&mut self.cc) {
                 Err(err) => {
                     // it is simple value and doesn't correspond to Durov's code
                     // but it is difficult in our engine to calc sharp
@@ -402,12 +412,12 @@ impl Engine {
         Ok(None)
     }
     fn step_ordinary(&mut self) -> Result<Option<i32>> {
+        self.step += 1;
+        self.log_string = Some("implicit RET");
         self.try_use_gas(Gas::implicit_ret_price())?;
         if self.ctrls.get(0).is_none() {
             return Ok(Some(0))
         }
-        self.step += 1;
-        self.log_string = Some("implicit RET");
         switch(self, ctrl!(0))?;
         Ok(None)
     }
@@ -1102,14 +1112,16 @@ impl Engine {
         } else {
             return Ok(())
         };
-        if exception.exception_code() == Some(ExceptionCode::OutOfGas) {
+        if exception.exception_code().is_some() {
             self.step += 1;
+        }
+        if exception.exception_code() == Some(ExceptionCode::OutOfGas) {
             log::trace!(target: "tvm", "OUT OF GAS CODE: {}\n", self.cmd_code);
             return Err(err)
         }
-        self.try_use_gas(Gas::exception_price())?;
-        if let Err(err) = self.gas.check_gas_remaining() {
-            return self.raise_exception(Some(err), false)
+        if let Err(err) = self.gas.try_use_gas(Gas::exception_price()) {
+            self.step += 1;
+            return Err(err);
         }
         let n = self.cmd.vars.len();
         // self.trace_info(EngineTraceInfoType::Exception, self.gas_used(), Some(format!("EXCEPTION: {}", err)));

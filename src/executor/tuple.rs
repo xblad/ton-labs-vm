@@ -1,5 +1,5 @@
 /*
-* Copyright 2018-2020 TON DEV SOLUTIONS LTD.
+* Copyright (C) 2019-2021 TON Labs. All Rights Reserved.
 *
 * Licensed under the SOFTWARE EVALUATION License (the "License"); you may not use
 * this file except in compliance with the License.
@@ -254,6 +254,56 @@ pub(super) fn execute_tuple_explodevar(engine: &mut Engine) -> Status {
 }
 
 fn set_index(engine: &mut Engine, name: &'static str, how: u8) -> Status {
+    if engine.version < 2 {
+        set_index_v1(engine, name, how)
+    } else {
+        set_index_v2(engine, name, how)
+    }
+}
+
+fn set_index_v2(engine: &mut Engine, name: &'static str, how: u8) -> Status {
+    let mut params = 2;
+    let mut inst = Instruction::new(name);
+
+    if how.bit(STACK) {
+        params += 1;
+    }
+    if how.bit(CMD) {
+        inst = inst.set_opts(InstructionOptions::Length(0..16));
+    }
+    engine.load_instruction(inst)?;
+    fetch_stack(engine, params)?;
+    let n = if how.bit(CMD) {
+        engine.cmd.length()
+    } else if how.bit(STACK) {
+        engine.cmd.var(0).as_integer()?.into(0..=254)?
+    } else {
+        unreachable!("internal error in set_index, how = {}", how)
+    };
+    let mut tuple = if how.bit(QUIET) && engine.cmd.var(params - 1).is_null() {
+        vec![]
+    } else {
+        engine.cmd.var_mut(params - 1).as_tuple_mut()?
+    };
+    let var = engine.cmd.var_mut(params - 2).withdraw();
+    let len = tuple.len();
+    if n < len {
+        tuple[n] = var;
+        engine.use_gas(Gas::tuple_gas_price(len));
+    } else if how.bit(QUIET) {
+        if !var.is_null() {
+            tuple.append(&mut vec![StackItem::None; n - len]);
+            tuple.push(var);
+            engine.use_gas(Gas::tuple_gas_price(n + 1));
+        }
+    } else {
+        return err!(ExceptionCode::RangeCheckError)
+    }
+    engine.cc.stack.push_tuple(tuple);
+    Ok(())
+}
+
+fn set_index_v1(engine: &mut Engine, name: &'static str, how: u8) -> Status {
     let mut params = 2;
     let mut inst = Instruction::new(name);
 
@@ -278,6 +328,7 @@ fn set_index(engine: &mut Engine, name: &'static str, how: u8) -> Status {
         engine.cmd.var_mut(params - 1).as_tuple_mut()?
     };
     let var = engine.cmd.var_mut(params - 2).withdraw();
+    let value_is_null = var.is_null();
     let len = tuple.len();
     if n < len {
         tuple[n] = var;
@@ -287,7 +338,9 @@ fn set_index(engine: &mut Engine, name: &'static str, how: u8) -> Status {
     } else {
         return err!(ExceptionCode::RangeCheckError)
     }
-    engine.use_gas(Gas::tuple_gas_price(tuple.len()));
+    if !value_is_null {
+        engine.use_gas(Gas::tuple_gas_price(tuple.len()));
+    }
     engine.cc.stack.push_tuple(tuple);
     Ok(())
 }
