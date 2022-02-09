@@ -27,3 +27,7 @@ ci_run = []
 fift_check = []
 log_file = []
 verbose = []
+
+[[bench]]
+name = "benchmarks"
+harness = false

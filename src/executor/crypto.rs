@@ -25,7 +25,7 @@ use crate::{
     },
     types::{Exception, Status}
 };
-use ed25519::signature::{Signature, Verifier};
+use ed25519::signature::Verifier;
 use std::sync::Arc;
 use ton_types::{BuilderData, error, GasConsumer, ExceptionCode, UInt256};
 
@@ -92,7 +92,7 @@ pub(super) fn execute_chksigns(engine: &mut Engine) -> Status {
     let pub_key = ed25519_dalek::PublicKey::from_bytes(
         &pub_key.data()[..PUBLIC_KEY_BYTES]
     ).map_err(|_| exception!(ExceptionCode::FatalError))?;
-    let signature = ed25519::Signature::from_bytes(
+    let signature = ed25519::signature::Signature::from_bytes(
         &engine.cmd.var(1).as_slice()?.get_bytestring(0)[..SIGNATURE_BYTES]
     ).map_err(|_| exception!(ExceptionCode::FatalError))?;
 
