@@ -11,8 +11,6 @@
 * limitations under the License.
 */
 
-#![cfg_attr(feature = "ci_run", deny(warnings))]
-
 #[macro_use]
 pub mod types;
 #[macro_use]

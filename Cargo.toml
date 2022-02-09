@@ -1,8 +1,7 @@
 [package]
-build = 'build.rs'
-edition = '2018'
-name = 'ton_vm'
-version = '1.8.29'
+edition = "2021"
+name = "ton_vm"
+version = "1.8.29"
 
 [dependencies]
 ton_types = { git = "https://github.com/broxus/ton-labs-types.git" }
@@ -22,12 +21,6 @@ thiserror = "1.0.26"
 smallvec = { version = "1.6.1", features = ["const_generics", "union", "write"] }
 
 [features]
-sha-asm = ["sha2/asm"]
-ci_run = []
 fift_check = []
 log_file = []
 verbose = []
-
-[[bench]]
-name = "benchmarks"
-harness = false
