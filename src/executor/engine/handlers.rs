@@ -15,12 +15,13 @@ use crate::{
     error::TvmError,
     executor::{
         engine::{Engine, core::ExecuteHandler, storage::fetch_stack},
+        accounts::*,
         blockchain::*, config::*, continuation::*, crypto::*, currency::*, deserialization::*,
         dictionary::*, dump::*, exceptions::*, gas::*, globals::*, math::*, null::*,
         rand::*, serialization::*, slice_comparison::*, stack::*, tuple::*,
         types::{InstructionOptions, Instruction}
     },
-    stack::{continuation::ContinuationData, integer::behavior::{Signaling, Quiet}},
+    stack::integer::behavior::{Signaling, Quiet},
     types::{Exception, Status}
 };
 use std::{fmt, ops::Range};
@@ -51,7 +52,7 @@ fn execute_setcpx(engine: &mut Engine) -> Status {
 }
 
 fn execute_unknown(engine: &mut Engine) -> Status {
-    let code = engine.cc.last_cmd();
+    let code = engine.last_cmd();
     log::trace!(target: "tvm", "Invalid code: {} ({:#X})\n", code, code);
     err!(ExceptionCode::InvalidOpcode)
 }
@@ -670,6 +671,7 @@ impl Handlers {
                 .set(0x04, execute_setcode)
                 .set(0x06, execute_setlibcode)
                 .set(0x07, execute_changelib)
+                .set(0x0A, execute_copyleft)
             )
     }
 
@@ -849,6 +851,8 @@ impl Handlers {
                 .set(0x29, execute_config_root)
                 .set(0x2A, execute_my_code)
                 .set(0x2B, execute_init_code_hash)
+                .set(0x2C, execute_storage_fees_collected)
+                .set(0x2D, execute_seq_no)
                 .set(0x30, execute_config_dict)
                 .set(0x32, execute_config_ref_param)
                 .set(0x33, execute_config_opt_param)
@@ -874,6 +878,10 @@ impl Handlers {
             .set(0x41, execute_cdatasize)
             .set(0x42, execute_sdatasizeq)
             .set(0x43, execute_sdatasize)
+            .set(0x44, execute_find_by_init_code_hash)
+            .set(0x45, execute_find_by_code_hash)
+            .set(0x46, execute_find_by_data_hash)
+            .set(0x50, execute_try_elect)
         )
     }
     /// Dumping functions
@@ -896,12 +904,12 @@ impl Handlers {
         )
     }
 
-    pub(super) fn get_handler(&self, cc: &mut ContinuationData) -> Result<ExecuteHandler> {
-        let cmd = cc.next_cmd()?;
+    pub(super) fn get_handler(&self, engine: &mut Engine) -> Result<ExecuteHandler> {
+        let cmd = engine.next_cmd()?;
         // log::debug!(target: "tvm", "get_handler cmd: {:X}\n", cmd);
         match self.directs[cmd as usize] {
             Some(Handler::Direct(handler)) => Ok(handler),
-            Some(Handler::Subset(i)) => self.subsets[i].get_handler(cc),
+            Some(Handler::Subset(i)) => self.subsets[i].get_handler(engine),
             None => Ok(execute_unknown)
         }
     }
@@ -952,8 +960,24 @@ impl Handlers {
     }
 }
 
+fn print_handlers(handlers: &Handlers, f: &mut fmt::Formatter, indent: String) -> fmt::Result {
+    for h in 0..handlers.directs.len() {
+        match handlers.directs[h] {
+            Some(Handler::Direct(func)) => {
+                writeln!(f, "{}{:02x}: 0x{:x}", indent, h, func as *const u8 as usize)?
+            }
+            Some(Handler::Subset(i)) => {
+                writeln!(f, "{}{:02x}: subset", indent, h)?;
+                print_handlers(&handlers.subsets[i], f, format!("  {}", indent))?;
+            }
+            None => {}
+        }
+    }
+    fmt::Result::Ok(())
+}
+
 impl fmt::Debug for Handlers {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "...")
+        print_handlers(self, f, String::new())
     }
 }

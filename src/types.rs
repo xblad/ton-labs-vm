@@ -15,11 +15,6 @@ use crate::stack::{StackItem, integer::IntegerData};
 use std::fmt;
 use ton_types::{Result, types::ExceptionCode};
 
-pub const ACTION_SEND_MSG: u32 = 0x0ec3c86d;
-pub const ACTION_SET_CODE: u32 = 0xad4de08e;
-pub const ACTION_RESERVE:  u32 = 0x36e6b809;
-pub const ACTION_CHANGE_LIB: u32 = 0x26fa1dd4;
-
 #[derive(Clone, PartialEq)]
 enum ExceptionType {
     System(ExceptionCode),
@@ -122,7 +117,6 @@ impl Exception {
     }
 }
 
-#[macro_export]
 macro_rules! exception {
     ($code:expr) => {
         error!(TvmError::TvmExceptionFull(Exception::from_code($code, file!(), line!()), String::new()))
@@ -144,7 +138,6 @@ macro_rules! exception {
     };
 }
 
-#[macro_export]
 macro_rules! err {
     ($code:expr) => {
         Err(exception!($code))
@@ -163,46 +156,15 @@ macro_rules! err {
     };
 }
 
-#[macro_export]
-macro_rules! err_opt {
-    ($code:expr) => {
-        Some(exception!($code))
-    };
-}
-
-#[macro_export]
-macro_rules! opt {
-    ($from:expr) => {
-        match $from {
-            Some(e) => return Some(e),
-            None => (),
-        }
-    };
-}
-
-#[macro_export]
-macro_rules! to_err {
-    ($from:expr, $ok:expr) => {
-        match $from {
-            Some(e) => Err(e),
-            None => Ok($ok),
-        }
-    };
-}
-
-#[macro_export]
-macro_rules! to_opt {
-    ($from:expr) => {
-        match $from {
-            Ok(_) => None,
-            Err(e) => Some(e),
-        }
+macro_rules! custom_err {
+    ($code:expr, $msg:literal, $($arg:tt)*) => {
+        return Err(error!(TvmError::TvmExceptionFull(Exception::from_number_and_value($code, Default::default(), file!(), line!()), format!($msg, $($arg)*))))
     };
 }
 
 impl fmt::Display for Exception {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}, value: {}", self.exception.exception_message(), self.value)
+        write!(f, "{}, value: {} {}:{}", self.exception.exception_message(), self.value, self.file, self.line)
     }
 }
 
@@ -212,7 +174,6 @@ impl fmt::Debug for Exception {
     }
 }
 
-// pub(crate) use ton_types::Result;
 pub(crate) type ResultMut<'a, T> = Result<&'a mut T>;
 pub(crate) type ResultOpt<T> = Result<Option<T>>;
 pub(crate) type ResultRef<'a, T> = Result<&'a T>;
