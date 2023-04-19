@@ -35,8 +35,10 @@ mod dump;
 mod null;
 mod config;
 mod rand;
+#[cfg(feature = "gosh")]
+mod diff;
 
-pub use engine::{Engine, BehaviorModifiers, EngineTraceInfo, EngineTraceInfoType, IndexProvider};
+pub use engine::*;
 use smallvec::smallvec;
 use ton_types::{BuilderData, Cell, IBitstring, Result};
 

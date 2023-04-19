@@ -13,13 +13,14 @@
 */
 
 use crate::{
+    error::TvmError,
     stack::integer::{
         behavior::{OperationBehavior, Quiet, Signaling},
         serialization::Encoding,
     },
-    types::ResultOpt
+    types::{ResultOpt, Exception},
 };
-use ton_types::{Result, BuilderData, SliceData};
+use ton_types::{error, BuilderData, ExceptionCode, Result, SliceData};
 
 use core::mem;
 use num_traits::{One, Signed, Zero};
@@ -140,6 +141,19 @@ impl IntegerData {
         }
     }
 
+    pub fn check_neg(&self) -> Result<()> {
+        match self.value {
+            IntegerValue::NaN => err!(ExceptionCode::RangeCheckError, "not a number"),
+            IntegerValue::Value(ref value) => {
+                if value.is_negative() {
+                    err!(ExceptionCode::RangeCheckError, "{} is negative", value)
+                } else {
+                    Ok(())
+                }
+            }
+        }
+    }
+
     /// Checks if value is zero.
     #[inline]
     pub fn is_zero(&self) -> bool {
@@ -170,35 +184,35 @@ impl IntegerData {
 
     /// Returns true if signed value fits into a given bits size; otherwise false.
     #[inline]
-    pub fn fits_in(&self, bits: usize) -> bool {
-        self.bitsize() <= bits
+    pub fn fits_in(&self, bits: usize) -> Result<bool> {
+        Ok(self.bitsize()? <= bits)
     }
 
     /// Returns true if unsigned value fits into a given bits size; otherwise false.
     #[inline]
-    pub fn ufits_in(&self, bits: usize) -> bool {
-        !self.is_neg() && self.ubitsize() <= bits
+    pub fn ufits_in(&self, bits: usize) -> Result<bool> {
+        Ok(!self.is_neg() && self.ubitsize()? <= bits)
     }
 
     /// Determines a fewest bits necessary to express signed value.
     #[inline]
-    pub fn bitsize(&self) -> usize {
+    pub fn bitsize(&self) -> Result<usize> {
         utils::process_value(self, |value| {
-            utils::bitsize(value)
+            Ok(utils::bitsize(value))
         })
     }
 
     /// Determines a fewest bits necessary to express unsigned value.
     #[inline]
-    pub fn ubitsize(&self) -> usize {
+    pub fn ubitsize(&self) -> Result<usize> {
         utils::process_value(self, |value| {
             debug_assert!(!value.is_negative());
-            value.bits() as usize
+            Ok(value.bits() as usize)
         })
     }
 
     pub fn as_slice<T: Encoding>(&self, bits: usize) -> Result<SliceData> {
-        Ok(self.as_builder::<T>(bits)?.into_cell()?.into())
+        SliceData::load_builder(self.as_builder::<T>(bits)?)
     }
 
     pub fn as_builder<T: Encoding>(&self, bits: usize) -> Result<BuilderData> {
@@ -225,12 +239,14 @@ pub mod utils {
     use std::ops::Not;
 
     #[inline]
-    pub fn process_value<F, R>(value: &IntegerData, call_on_valid: F) -> R
+    pub fn process_value<F, R>(value: &IntegerData, call_on_valid: F) -> Result<R>
     where
-        F: Fn(&Int) -> R,
+        F: Fn(&Int) -> Result<R>,
     {
         match value.value {
-            IntegerValue::NaN => panic!("IntegerData must be a valid number"),
+            IntegerValue::NaN => {
+                err!(ExceptionCode::IntegerOverflow)
+            }
             IntegerValue::Value(ref value) => call_on_valid(value),
         }
     }
@@ -310,7 +326,7 @@ pub mod utils {
     {
         let (r1, r2) = result;
         match IntegerData::from(r1) {
-            Ok(r1) => Ok((r1, IntegerData::from(r2).unwrap())),
+            Ok(r1) => Ok((r1, IntegerData::from(r2)?)),
             Err(_) => {
                 on_integer_overflow!(T)?;
                 Ok(nan_constructor())

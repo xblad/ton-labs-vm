@@ -27,12 +27,12 @@ use crate::{
     },
     stack::{
         StackItem, continuation::{ContinuationData, ContinuationType},
-        integer::{IntegerData, behavior::Signaling}
+        integer::{IntegerData, behavior::Signaling}, savelist::SaveList
     },
     types::{Exception, Status}
 };
 use ton_types::{error, fail, types::ExceptionCode};
-use std::{mem, ops::{Range, RangeInclusive}, sync::Arc};
+use std::{mem, ops::{Range, RangeInclusive}};
 
 const CALLX: u8 = 0x40;   // CALLX to found value
 const SWITCH: u8 = 0x80;  // SWITCH to found value
@@ -1158,6 +1158,9 @@ pub(super) fn execute_setcontctrx(engine: &mut Engine) -> Status {
     )?;
     fetch_stack(engine, 3)?;
     let creg = engine.cmd.var(0).as_integer()?.into(0..=255)?;
+    if !SaveList::REGS.contains(&(creg as usize)) {
+        return err!(ExceptionCode::RangeCheckError)
+    }
     engine.cmd.var(1).as_continuation()?;
     swap(engine, var!(2), savelist!(var!(1), creg))?;
     engine.cc.stack.push(engine.cmd.vars.remove(1));

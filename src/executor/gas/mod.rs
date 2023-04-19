@@ -18,7 +18,6 @@ use crate::{
     types::{Exception, Status}
 };
 use ton_types::{error, types::ExceptionCode, Result};
-use std::sync::Arc;
 
 pub mod gas_state;
 
@@ -81,10 +80,10 @@ pub fn execute_gramtogas(engine: &mut Engine) -> Status {
 pub fn execute_gastogram(engine: &mut Engine) -> Status {
     engine.load_instruction(Instruction::new("GASTOGRAM"))?;
     fetch_stack(engine, 1)?;
-    let gas = engine.cmd.var(0).as_integer()?.take_value_of(|x| i64::from_int(x).ok())?;
+    let gas = engine.cmd.var(0).as_integer()?;
     let gas_price = engine.get_gas().get_gas_price();
-    let nanogram_output = gas * gas_price;
-    engine.cc.stack.push(int!(nanogram_output));
+    let nanogram_output = gas.mul::<Quiet>(&IntegerData::from_i64(gas_price))?;
+    engine.cc.stack.push(StackItem::int(nanogram_output));
     Ok(())
 }
 

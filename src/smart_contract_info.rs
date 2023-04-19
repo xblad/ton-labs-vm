@@ -16,10 +16,8 @@ use crate::stack::{
     integer::IntegerData,
 };
 use sha2::{Sha256, Digest};
-use std::sync::Arc;
 use ton_block::{GlobalCapabilities, CurrencyCollection};
 use ton_types::{Cell, HashmapE, HashmapType, SliceData, types::UInt256};
-
 
 /*
 The smart-contract information
@@ -31,7 +29,7 @@ unixtime:uint32 block_lt:uint64 trans_lt:uint64
 rand_seed:uint256 balance_remaining:CurrencyCollection
 myself:MsgAddress = SmartContractInfo;
 */
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct SmartContractInfo {
     pub actions: u16,
     pub msgs_sent: u16,
@@ -125,10 +123,10 @@ impl SmartContractInfo{
         self.rand_seed = if !rand_seed_block.is_zero() {
             let mut hasher = Sha256::new();
             hasher.update(&rand_seed_block);
-            hasher.update(&account_address_anycast);
+            hasher.update(account_address_anycast);
 
             let sha256 = hasher.finalize();
-            IntegerData::from_unsigned_bytes_be(&sha256)
+            IntegerData::from_unsigned_bytes_be(sha256)
         } else {
             // if the user forgot to set the rand_seed_block value, then this 0 will be clearly visible on tests
             log::warn!(target: "tvm", "Not set rand_seed_block");
@@ -155,7 +153,6 @@ impl SmartContractInfo{
     }
 
     pub fn into_temp_data_item(self) -> StackItem {
-        debug_assert_ne!(self.capabilities, 0, "set member capabilities");
         debug_assert_eq!(self.balance_remaining_grams, 0, "use balance instead old");
         debug_assert!(self.balance_remaining_other.data().is_none(), "use balance instead old");
 

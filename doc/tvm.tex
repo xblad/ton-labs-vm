@@ -12,7 +12,7 @@
 \usepackage{multirow}
 %\usepackage{chngcntr}
 %\CompileMatrices
-\usepackage[bookmarks=false,pdfauthor={Nikolai Durov},pdftitle={Telegram Open Network Virtual Machine}]{hyperref}
+\usepackage[bookmarksnumbered,pdfauthor={EverX},pdftitle={Telegram Open Network Virtual Machine}]{hyperref}
 \usepackage{fancyhdr}
 \usepackage{caption}
 %
@@ -96,7 +96,7 @@
 \hfuzz=0.8pt
 
 \title{Telegram Open Network Virtual Machine}
-\author{Nikolai Durov}
+\author{Nikolai Durov, Everscale Team}
 \begin{document}
 
 %\pagestyle{myheadings}
@@ -1645,6 +1645,22 @@ Most of these ``other comparison'' primitives actually compare the data portions
 \item {\tt C713} --- {\tt SDCNTTRAIL1} ($s$ -- $n$), returns the number of trailing ones in $s$.
 \end{itemize}
 
+\nxsubpoint\emb{Diff operations (Only available in GOSH network)}
+\begin{itemize}
+\item {\tt C714} --- {\tt DIFF} ($c$ $c$ -- $c$), calculates diff between first and second parameters and returns it as cell.
+\item {\tt C715} --- {\tt DIFF\_PATCH} ($c$ $c$ -- $c$), takes the first parameter as document, the second parameter as patch, received on DIFF command, applies patch and saves result document to cell.
+\item {\tt C716} --- {\tt ZIP} ($c$ -- $c$), zip string to cell
+\item {\tt C717} --- {\tt UNZIP} ($c$ -- $c$), unzip cell to string
+\item {\tt C718} --- {\tt DIFF\_ZIP} ($c$ $c$ -- $c$), like DIFF but unzip parameters before operation and zip to cell after operation.
+\item {\tt C719} --- {\tt DIFF\_PATCH\_ZIP} ($c$ $c$ -- $c$), like DIFF\_PATCH but unzip parameters before operation and zip to cell after operation.
+\item {\tt C720} --- {\tt DIFF\_PATCHQ} ($c$ $c$ -- $c$), quiet version of DIFF\_PATCH
+\item {\tt C721} --- {\tt DIFF\_PATCH\_ZIPQ} ($c$ $c$ -- $c$), quiet version of DIFF\_PATCH\_ZIP
+\item {\tt C722} --- {\tt DIFF\_PATCH\_BINARY} ($c$ $c$ -- $c$), like DIFF\_PATCH but takes and returns binary arrays instead of string.
+\item {\tt C723} --- {\tt DIFF\_PATCH\_BINARY\_ZIP} ($c$ $c$ -- $c$), like DIFF\_PATCH\_ZIP but takes and returns binary arrays instead of string.
+\item {\tt C724} --- {\tt DIFF\_PATCH\_BINARYQ} ($c$ $c$ -- $c$), like DIFF\_PATCHQ but takes and returns binary arrays instead of string.
+\item {\tt C725} --- {\tt DIFF\_PATCH\_BINARY\_ZIPQ} ($c$ $c$ -- $c$), like DIFF\_PATCH\_ZIPQ but takes and returns binary arrays instead of string.
+\end{itemize}
+
 \mysubsection{Cell primitives}
 
 The cell primitives are mostly either {\em cell serialization primitives}, which work with {\em Builder\/}s, or {\em cell deserialization primitives}, which work with {\em Slice\/}s.
@@ -2233,7 +2249,7 @@ The following primitives read configuration data provided in the {\em Tuple\/} s
 \item {\tt F827} --- {\tt BALANCE} ( -- $t$), returns the remaining balance of the smart contract as a {\em Tuple\/} consisting of an {\em Integer} (the remaining Gram balance in nanograms) and a {\em Maybe Cell} (a dictionary with 32-bit keys representing the balance of ``extra currencies''). Equivalent to {\tt GETPARAM 7}. Note that {\tt RAW} primitives such as {\tt SENDRAWMSG} do not update this field. 
 \item {\tt F828} --- {\tt MYADDR} ( -- $s$), returns the internal address of the current smart contract as a {\em Slice\/} with a {\tt MsgAddressInt}. If necessary, it can be parsed further using primitives such as {\tt PARSESTDADDR} or {\tt REWRITESTDADDR}. Equivalent to {\tt GETPARAM 8}.
 \item {\tt F829} --- {\tt CONFIGROOT} ( -- $D$), returns the {\em Maybe Cell\/}~$D$ with the current global configuration dictionary. Equivalent to {\tt GETPARAM 9}.
-\item {\tt F82A} --- {\tt MYCODE} ( -- $C$), returns the {\emCell\/}~$C$ with the inital code of the smartcontract. Equivalent to {\tt GETPARAM 10}.
+\item {\tt F82A} --- {\tt MYCODE} ( -- $C$), returns the {\em Cell\/}~$c$ with the inital code of the smartcontract. Equivalent to {\tt GETPARAM 10}.
 \item {\tt F82B} --- {\tt INITCODEHASH} ( -- $x$), returns the {\em Integerl\/}~$x$ returns the integer represented 256 bit hash of code cell with contract was deployed. Equivalent to {\tt GETPARAM 11}.
 \item {\tt F82C} --- {\tt STORAGEFEE} ( -- $x$), returns the {\em Integer\/}~$x$ with collected storage fee from account in this transaction. Equivalent to {\tt GETPARAM 12}.
 \item {\tt F82D} --- {\tt SEQNO} ( -- $x$), returns the {\em Integer\/}~$x$ with current sequence number of collating block. Equivalent to {\tt GETPARAM 13}.
@@ -2268,11 +2284,11 @@ The ``global variables'' may be helpful in implementing some high-level smart-co
 \item {\tt F941} --- {\tt CDATASIZE} ($c$ $n$ -- $x$ $y$ $z$), a non-quiet version of {\tt CDATASIZEQ} that throws a cell overflow exception (8) on failure.
 \item {\tt F942} --- {\tt SDATASIZEQ} ($s$ $n$ -- $x$ $y$ $z$ $-1$ or $0$), similar to {\tt CDATASIZEQ}, but accepting a {\em Slice\/}~$s$ instead of a {\em Cell\/}. The returned value of $x$ does not take into account the cell that contains the slice~$s$ itself; however, the data bits and the cell references of $s$ are accounted for in $y$ and~$z$.
 \item {\tt F943} --- {\tt SDATASIZE} ($s$ $n$ -- $x$ $y$ $z$), a non-quiet version of {\tt SDATASIZEQ} that throws a cell overflow exception (8) on failure.
-\item {\tt F944} --- {\tt FIND_BY_INIT_CODE_HASH} ($s$ -- $t$), returns the list of accounts with initial code hash specified in 256 bit of $s$ slice.
-\item {\tt F945} --- {\tt FIND_BY_CODE_HASH} ($s$ -- $t$), returns the list of accounts with code hash specified in 256 bit of $s$ slice.
-\item {\tt F946} --- {\tt FIND_BY_DATA_HASH} ($s$ -- $t$), returns the list of accounts with data hash specified in 256 bit of $s$ slice.
+\item {\tt F944} --- {\tt FIND\_BY\_INIT\_CODE\_HASH} ($s$ -- $t$), returns the list of accounts with initial code hash specified in 256 bit of {\em Slice\/} $s$.
+\item {\tt F945} --- {\tt FIND\_BY\_CODE\_HASH} ($s$ -- $t$), returns the list of accounts with code hash specified in 256 bit of {\em Slice\/} $s$.
+\item {\tt F946} --- {\tt FIND\_BY\_DATA\_HASH} ($s$ -- $t$), returns the list of accounts with data hash specified in 256 bit of {\em Slice\/} $s$.
 \item {\tt F947}--{\tt F97F} --- Reserved for miscellaneous TON-specific primitives that do not fall into any other specific category.
-\item {\tt F950} --- {\tt TRYELECT} ($D$ -- $c$ $c'$ $D'$ $x$ $x'$), executes try_elect method for accounts got by config param 30. $D$ is the input Hashmap with credits, $c$ - contains serialized validator set, $c'$ is the HashmapE with frozen stakes, $D'$ is the HashmapE with credits, $x$ is the integer with total stake, $x'$ is the integer with total weight.
+\item {\tt F950} --- {\tt TRYELECT} ($D$ -- $c$ $c'$ $D'$ $x$ $x'$), executes try\_elect method for accounts got by config param 30. $D$ is the input Hashmap with credits, $c$ - contains serialized validator set, $c'$ is the HashmapE with frozen stakes, $D'$ is the HashmapE with credits, $x$ is the integer with total stake, $x'$ is the integer with total weight.
 \end{itemize}
 
 \nxsubpoint\emb{Currency manipulation primitives}
@@ -2338,7 +2354,7 @@ The following primitives, which use the above conventions, are defined:
 \item {\tt FB04} --- {\tt SETCODE} ($c$ -- ), creates an output action that would change this smart contract code to that given by {\em Cell\/}~$c$. Notice that this change will take effect only after the successful termination of the current run of the smart contract.
 \item {\tt FB06} --- {\tt SETLIBCODE} ($c$ $x$ -- ), creates an output action that would modify the collection of this smart contract libraries by adding or removing library with code given in {\em Cell\/}~$c$. If $x=0$, the library is actually removed if it was previously present in the collection (if not, this action does nothing). If $x=1$, the library is added as a private library, and if $x=2$, the library is added as a public library (and becomes available to all smart contracts if the current smart contract resides in the masterchain); if the library was present in the collection before, its public/private status is changed according to $x$. Values of $x$ other than $0\ldots 2$ are invalid.
 \item {\tt FB07} --- {\tt CHANGELIB} ($h$ $x$ -- ), creates an output action similarly to {\tt SETLIBCODE}, but instead of the library code accepts its hash as an unsigned 256-bit integer $h$. If $x\neq0$ and the library with hash $h$ is absent from the library collection of this smart contract, this output action will fail.
-\item {\tt FB0A} --- {\tt COPYLEFT} ($s$ $x$ -- ), where $s$ - is slice of 256-bit AccountId and $x$ - is type of license. Add license payment to code creator. The license payment calculates from compute_phase_fees taking the appropriate percentage. If summary payment is less than license_payment_threshold, then value saves in unsplit_shard_state of masterblock. If summary payment in unsplit_shard_state is more than license_payment_threshold then node sends internal message to account address in masterchain, specified in slice s. The instruction return an error on contracts in masterchain.
+\item {\tt FB0A} --- {\tt COPYLEFT} ($s$ $x$ -- ), where $s$ - is slice of 256-bit AccountId and $x$ - is type of license. Add license payment to code creator. The license payment calculates from compute\_phase\_fees taking the appropriate percentage. If summary payment is less than license\_payment\_threshold, then value saves in unsplit\_shard\_state of masterblock. If summary payment in unsplit\_shard\_state is more than license\_payment\_threshold then node sends internal message to account address in masterchain, specified in slice s. The instruction return an error on contracts in masterchain.
 \item {\tt FB08}--{\tt FB3F} --- Reserved for output action primitives.
 \end{itemize}
 

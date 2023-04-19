@@ -25,7 +25,6 @@ use crate::{
     types::Status
 };
 use sha2::Digest;
-use std::sync::Arc;
 
 // (x - )
 pub(crate) fn execute_addrand(engine: &mut Engine) -> Status {
@@ -67,8 +66,8 @@ pub(crate) fn execute_randu256(engine: &mut Engine) -> Status {
     let sha512 = hasher.finalize();
     engine.set_rand(UnsignedIntegerBigEndianEncoding::new(256)
         .deserialize(&sha512[..32]))?;
-    engine.cc.stack.push(StackItem::Integer(Arc::new(UnsignedIntegerBigEndianEncoding::new(256)
-        .deserialize(&sha512[32..]))));
+    engine.cc.stack.push(StackItem::int(UnsignedIntegerBigEndianEncoding::new(256)
+        .deserialize(&sha512[32..])));
     Ok(())
 }
 

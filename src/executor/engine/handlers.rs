@@ -24,6 +24,8 @@ use crate::{
     stack::integer::behavior::{Signaling, Quiet},
     types::{Exception, Status}
 };
+#[cfg(feature = "gosh")]
+use crate::executor::diff::*;
 use std::{fmt, ops::Range};
 use ton_types::{error, Result, types::ExceptionCode};
 
@@ -328,27 +330,43 @@ impl Handlers {
             .set(0xC2, execute_gtint::<Signaling>)
             .set(0xC3, execute_neqint::<Signaling>)
             .set(0xC4, execute_isnan)
-            .set(0xC5, execute_chknan)
-            .add_subset(0xC7, Handlers::new()
-                .set(0x00, execute_sempty)
-                .set(0x01, execute_sdempty)
-                .set(0x02, execute_srempty)
-                .set(0x03, execute_sdfirst)
-                .set(0x04, execute_sdlexcmp)
-                .set(0x05, execute_sdeq)
-                .set(0x08, execute_sdpfx)
-                .set(0x09, execute_sdpfxrev)
-                .set(0x0A, execute_sdppfx)
-                .set(0x0B, execute_sdppfxrev)
-                .set(0x0C, execute_sdsfx)
-                .set(0x0D, execute_sdsfxrev)
-                .set(0x0E, execute_sdpsfx)
-                .set(0x0F, execute_sdpsfxrev)
-                .set(0x10, execute_sdcntlead0)
-                .set(0x11, execute_sdcntlead1)
-                .set(0x12, execute_sdcnttrail0)
-                .set(0x13, execute_sdcnttrail1)
-            )
+            .set(0xC5, execute_chknan);
+        let mut c7_handlers = Handlers::new();
+        c7_handlers
+            .set(0x00, execute_sempty)
+            .set(0x01, execute_sdempty)
+            .set(0x02, execute_srempty)
+            .set(0x03, execute_sdfirst)
+            .set(0x04, execute_sdlexcmp)
+            .set(0x05, execute_sdeq)
+            .set(0x08, execute_sdpfx)
+            .set(0x09, execute_sdpfxrev)
+            .set(0x0A, execute_sdppfx)
+            .set(0x0B, execute_sdppfxrev)
+            .set(0x0C, execute_sdsfx)
+            .set(0x0D, execute_sdsfxrev)
+            .set(0x0E, execute_sdpsfx)
+            .set(0x0F, execute_sdpsfxrev)
+            .set(0x10, execute_sdcntlead0)
+            .set(0x11, execute_sdcntlead1)
+            .set(0x12, execute_sdcnttrail0)
+            .set(0x13, execute_sdcnttrail1);
+        #[cfg(feature = "gosh")] {
+            c7_handlers
+                .set(0x14, execute_diff)
+                .set(0x15, execute_diff_patch_not_quiet)
+                .set(0x16, execute_zip)
+                .set(0x17, execute_unzip)
+                .set(0x18, execute_diff_zip)
+                .set(0x19, execute_diff_patch_zip_not_quiet)
+                .set(0x20, execute_diff_patch_quiet)
+                .set(0x21, execute_diff_patch_zip_quiet)
+                .set(0x22, execute_diff_patch_binary_not_quiet)
+                .set(0x23, execute_diff_patch_binary_zip_not_quiet)
+                .set(0x24, execute_diff_patch_binary_quiet)
+                .set(0x25, execute_diff_patch_binary_zip_quiet);
+        }
+        self.add_subset(0xC7, &mut c7_handlers)
     }
 
     fn add_code_page_0_cell(&mut self) -> &mut Handlers {

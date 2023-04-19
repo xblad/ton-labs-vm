@@ -11,13 +11,22 @@
 * limitations under the License.
 */
 
-use crate::stack::{
-    BuilderData,
-    integer::{IntegerData, serialization::{Encoding, common::bits_to_bytes}},
-    serialization::{Serializer, Deserializer}
+use crate::{
+    error::TvmError,
+    stack::{
+        integer::{
+            serialization::{
+                common::bits_to_bytes,
+                Encoding,
+            },
+            IntegerData,
+        },
+        serialization::{Deserializer, Serializer},
+    },
+    types::Exception,
 };
 use smallvec::SmallVec;
-use ton_types::{Result, types::ExceptionCode, fail};
+use ton_types::{error, BuilderData, ExceptionCode, Result};
 
 pub struct UnsignedIntegerLittleEndianEncoding {
     length_in_bits: usize
@@ -31,13 +40,13 @@ impl Encoding for UnsignedIntegerLittleEndianEncoding {
 
 impl Serializer<IntegerData> for UnsignedIntegerLittleEndianEncoding {
     fn try_serialize(&self, value: &IntegerData) -> Result<BuilderData> {
-        if value.is_neg() || !value.ufits_in(self.length_in_bits) {
+        if value.is_neg() || !value.ufits_in(self.length_in_bits)? {
             // Spec. 3.2.7
             // * If the integer x to be serialized is not in the range
             //   −2^(n−1) <= x < 2^(n−1) (for signed integer serialization)
             //   or 0 <= x < 2^n (for unsigned integer serialization),
             //   a range check exception is usually generated
-            fail!(ExceptionCode::RangeCheckError)
+            return err!(ExceptionCode::RangeCheckError, "{} is not fit in {}", value, self.length_in_bits)
         }
 
         let value = value.take_value_of(|x| x.to_biguint())?;

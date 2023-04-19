@@ -12,11 +12,11 @@
 */
 
 use crate::{error::TvmError, types::Exception};
-use std::{cmp::{max, min}};
+use std::cmp::{max, min};
 use ton_types::{error, Result, types::ExceptionCode};
 
 // Gas state
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Gas {
     gas_limit_max: i64,
     gas_limit: i64,
@@ -142,7 +142,9 @@ impl Gas {
         STACK_ENTRY_GAS_PRICE * (depth - FREE_STACK_DEPTH) as i64
     }
     pub fn consume_stack(&mut self, stack_depth: usize) -> i64 {
-        self.use_gas(STACK_ENTRY_GAS_PRICE * (max(stack_depth, FREE_STACK_DEPTH) - FREE_STACK_DEPTH) as i64)
+        self.use_gas(
+            STACK_ENTRY_GAS_PRICE * (max(stack_depth, FREE_STACK_DEPTH) - FREE_STACK_DEPTH) as i64
+        )
     }
 
     /// Compute tuple usage cost
@@ -153,6 +155,53 @@ impl Gas {
         self.use_gas(TUPLE_ENTRY_GAS_PRICE * tuple_length as i64)
     }
 
+    #[cfg(feature = "gosh")]
+    /// line cost for diff
+    pub fn diff_fee_for_line(lines_first_file: usize, lines_second_file: usize) -> i64 {
+        let lines = std::cmp::max(lines_first_file, lines_second_file) as i64;
+        let duration = DIFF_DURATION_FOR_LINE * lines;
+        (duration * (duration as f64).log2() as i64) / DURATION_TO_GAS_COEFFICIENT
+    }
+
+    #[cfg(feature = "gosh")]
+    /// patch cost for diff
+    pub fn diff_fee_for_count_patches(count: usize) -> i64 {
+        (
+            (count * count * DIFF_DURATION_FOR_COUNT_PATCHES * DIFF_DURATION_FOR_COUNT_PATCHES) / 
+            (DURATION_TO_GAS_COEFFICIENT as usize)
+        ) as i64
+    }
+
+    #[cfg(feature = "gosh")]
+    /// line cost for diff_patch
+    pub fn diff_patch_fee_for_line(lines: i64) -> i64 {
+        (DIFF_PATCH_DURATION_FOR_LINE * lines) / DURATION_TO_GAS_COEFFICIENT
+    }
+
+    #[cfg(feature = "gosh")]
+    /// byte cost for diff_bytes_patch
+    pub fn diff_bytes_patch_fee_for_byte(bytes: i64) -> i64 {
+        (DIFF_PATCH_DURATION_FOR_BYTE * bytes) / DURATION_TO_GAS_COEFFICIENT
+    }
+
+    #[cfg(feature = "gosh")]
+    /// patch cost for diff_patch
+    pub fn diff_patch_fee_for_count_patches(count: i64) -> i64 {
+        (DIFF_PATCH_DURATION_FOR_COUNT_PATCHES * count) / DURATION_TO_GAS_COEFFICIENT
+    }
+
+    #[cfg(feature = "gosh")]
+    /// byte cost for zip
+    pub fn zip_fee_for_byte(bytes: i64) -> i64 {
+        (ZIP_DURATION_FOR_BYTE * bytes) / DURATION_TO_GAS_COEFFICIENT
+    }
+
+    #[cfg(feature = "gosh")]
+    /// byte cost for unzip
+    pub fn unzip_fee_for_byte(bytes: i64) -> i64 {
+        (UNZIP_DURATION_FOR_BYTE * bytes) / DURATION_TO_GAS_COEFFICIENT
+    }
+
     /// Set input gas to gas limit
     pub fn new_gas_limit(&mut self, gas_limit: i64) {
         self.gas_limit = max(0, min(gas_limit, self.gas_limit_max));
@@ -160,24 +209,28 @@ impl Gas {
         self.gas_remaining += self.gas_limit - self.gas_base;
         self.gas_base = self.gas_limit;
     }
+
     /// Update remaining gas limit
     pub fn use_gas(&mut self, gas: i64) -> i64 {
         self.gas_remaining -= gas;
         self.gas_remaining
     }
+
     /// Try to consume gas then raise exception out of gas if needed
     pub fn try_use_gas(&mut self, gas: i64) -> Result<Option<i32>> {
         self.gas_remaining -= gas;
         self.check_gas_remaining()
     }
+
     /// Raise out of gas exception
     pub fn check_gas_remaining(&self) -> Result<Option<i32>> {
         if self.gas_remaining >= 0 {
             Ok(None)
         } else {
-            Err(exception!(ExceptionCode::OutOfGas, self.gas_base - self.gas_remaining, ""))
+            Err(exception!(ExceptionCode::OutOfGas, self.gas_base - self.gas_remaining, "check_gas_remaining"))
         }
     }
+
     // *** Getters ***
     pub const fn get_gas_price(&self) -> i64 {
         self.gas_price

@@ -23,12 +23,13 @@ use crate::{
     },
     stack::{
         StackItem, continuation::ContinuationData,
-        integer::{IntegerData, behavior::Signaling}
+        integer::{IntegerData, behavior::Signaling}, savelist::SaveList
     },
     types::{Exception, Status}
 };
-use std::{cmp, sync::Arc};
+use std::cmp;
 use ton_types::{error, fail, types::ExceptionCode};
+use ton_block::GlobalCapabilities;
 
 // Stack manipulation *********************************************************
 
@@ -251,6 +252,9 @@ pub(super) fn execute_popctrx(engine: &mut Engine) -> Status {
     )?;
     fetch_stack(engine, 2)?;
     let creg = engine.cmd.var(0).as_small_integer()?;
+    if !SaveList::REGS.contains(&creg) {
+        return err!(ExceptionCode::RangeCheckError)
+    }
     swap(engine, var!(0), ctrl!(creg))
 }
 
@@ -262,7 +266,18 @@ pub(super) fn execute_popsave(engine: &mut Engine) -> Status {
     fetch_stack(engine, 1)?;
     let creg = engine.cmd.creg();
     swap(engine, var!(0), ctrl!(creg))?;
-    swap(engine, var!(0), savelist!(ctrl!(0), 0))
+    if engine.check_capabilities(GlobalCapabilities::CapsTvmBugfixes2022 as u64) {
+        if let Ok(c0) = engine.ctrl(0) {
+            if let Ok(c0) = c0.as_continuation() {
+                if c0.savelist.get(creg).is_some() {
+                    return Ok(())
+                }
+            }
+        }
+        swap(engine, var!(0), savelist!(ctrl!(0), creg))
+    } else {
+        swap(engine, var!(0), savelist!(ctrl!(0), 0))
+    }
 }
 
 // (x ... y ... z ... a - a... y ... z ... z y x)
@@ -382,6 +397,9 @@ pub(super) fn execute_pushctrx(engine: &mut Engine) -> Status {
     )?;
     fetch_stack(engine, 1)?;
     let creg = engine.cmd.var(0).as_small_integer()?;
+    if !SaveList::REGS.contains(&creg) {
+        return err!(ExceptionCode::RangeCheckError)
+    }
     copy_to_var(engine, ctrl!(creg))?;
     engine.cc.stack.push(engine.cmd.pop_var()?);
     Ok(())
@@ -413,7 +431,7 @@ pub(super) fn execute_pushint_big(engine: &mut Engine) -> Status {
         Instruction::new("PUSHINT").set_opts(InstructionOptions::BigInteger)
     )?;
     let num = engine.cmd.biginteger_mut();
-    engine.cc.stack.push(StackItem::Integer(Arc::new(num.withdraw())));
+    engine.cc.stack.push(StackItem::int(num.withdraw()));
     Ok(())
 }
 
@@ -435,10 +453,10 @@ pub(super) fn execute_pushnegpow2(engine: &mut Engine) -> Status {
             )
     )?;
     let power = engine.cmd.length();
-    engine.cc.stack.push(StackItem::Integer(Arc::new(
+    engine.cc.stack.push(StackItem::int(
         IntegerData::minus_one()
             .shl::<Signaling>(power)?
-    )));
+    ));
     Ok(())
 }
 
@@ -448,9 +466,9 @@ pub(super) fn execute_pushpow2(engine: &mut Engine) -> Status {
     engine.load_instruction(
         Instruction::new("PUSHPOW2")
     )?;
-    engine.cc.stack.push(StackItem::Integer(Arc::new(
+    engine.cc.stack.push(StackItem::int(
         IntegerData::one().shl::<Signaling>(power as usize + 1)?
-    )));
+    ));
     Ok(())
 }
 
@@ -463,13 +481,13 @@ pub(super) fn execute_pushpow2dec(engine: &mut Engine) -> Status {
             )
     )?;
     let power = engine.cmd.length();
-    engine.cc.stack.push(StackItem::Integer(Arc::new(
+    engine.cc.stack.push(StackItem::int(
         IntegerData::one()
             .shl::<Signaling>(power - 1)?
             .sub::<Signaling>(&IntegerData::one())?
             .shl::<Signaling>(1)?
             .add::<Signaling>(&IntegerData::one())?
-    )));
+    ));
     Ok(())
 }
 
