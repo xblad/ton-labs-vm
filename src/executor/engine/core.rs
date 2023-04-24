@@ -99,7 +99,6 @@ pub struct Engine {
     flags: u64,
     capabilities: u64,
     block_version: u32,
-    #[cfg(feature = "signature_with_id")]
     signature_id: i32,
 }
 
@@ -252,7 +251,6 @@ impl Engine {
             flags: 0,
             capabilities,
             block_version: 0,
-            #[cfg(feature = "signature_with_id")]
             signature_id: 0,
         }
     }
@@ -261,7 +259,6 @@ impl Engine {
         self.block_version = block_version
     }
 
-    #[cfg(feature = "signature_with_id")]
     pub fn set_signature_id(&mut self, signature_id: i32) {
         self.signature_id = signature_id;
     }
@@ -295,7 +292,6 @@ impl Engine {
         self.block_version
     }
 
-    #[cfg(feature = "signature_with_id")]
     pub fn signature_id(&self) -> i32 {
         self.signature_id
     }

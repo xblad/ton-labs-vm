@@ -94,11 +94,10 @@ impl AsRef<[u8]> for DataForSignature {
     }
 }
 
-fn preprocess_signed_data<'a>(_engine: &Engine, data: &'a [u8]) -> Cow<'a, [u8]> {
-    #[cfg(feature = "signature_with_id")]
-    if _engine.check_capabilities(GlobalCapabilities::CapSignatureWithId as u64) {
+fn preprocess_signed_data<'a>(engine: &Engine, data: &'a [u8]) -> Cow<'a, [u8]> {
+    if engine.check_capabilities(GlobalCapabilities::CapSignatureWithId as u64) {
         let mut extended_data = Vec::with_capacity(4 + data.len());
-        extended_data.extend_from_slice(&_engine.signature_id().to_be_bytes());
+        extended_data.extend_from_slice(&engine.signature_id().to_be_bytes());
         extended_data.extend_from_slice(data);
         return Cow::Owned(extended_data)
     }
@@ -144,11 +143,11 @@ fn check_signature(engine: &mut Engine, name: &'static str, hash: bool) -> Statu
             #[allow(clippy::collapsible_else_if)]
             if engine.check_capabilities(GlobalCapabilities::CapsTvmBugfixes2022 as u64) {
                 engine.cc.stack.push(boolean!(false));
-                return Ok(())    
+                return Ok(())
             } else {
                 if hash {
                     engine.cc.stack.push(boolean!(false));
-                    return Ok(())        
+                    return Ok(())
                 } else {
                     return err!(ExceptionCode::FatalError, "cannot load signature {}", err)
                 }
@@ -156,11 +155,8 @@ fn check_signature(engine: &mut Engine, name: &'static str, hash: bool) -> Statu
         }
     };
     let data = preprocess_signed_data(engine, data.as_ref());
-    #[cfg(feature = "signature_no_check")]
-    let result = 
+    let result =
         engine.modifiers.chksig_always_succeed || pub_key.verify(&data, &signature).is_ok();
-    #[cfg(not(feature = "signature_no_check"))]
-    let result = pub_key.verify(&data, &signature).is_ok();
     engine.cc.stack.push(boolean!(result));
     Ok(())
 }
