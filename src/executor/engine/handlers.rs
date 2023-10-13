@@ -24,8 +24,6 @@ use crate::{
     stack::integer::behavior::{Signaling, Quiet},
     types::{Exception, Status}
 };
-#[cfg(feature = "gosh")]
-use crate::executor::diff::*;
 use std::{fmt, ops::Range};
 use ton_types::{error, Result, types::ExceptionCode};
 
@@ -351,21 +349,6 @@ impl Handlers {
             .set(0x11, execute_sdcntlead1)
             .set(0x12, execute_sdcnttrail0)
             .set(0x13, execute_sdcnttrail1);
-        #[cfg(feature = "gosh")] {
-            c7_handlers
-                .set(0x14, execute_diff)
-                .set(0x15, execute_diff_patch_not_quiet)
-                .set(0x16, execute_zip)
-                .set(0x17, execute_unzip)
-                .set(0x18, execute_diff_zip)
-                .set(0x19, execute_diff_patch_zip_not_quiet)
-                .set(0x20, execute_diff_patch_quiet)
-                .set(0x21, execute_diff_patch_zip_quiet)
-                .set(0x22, execute_diff_patch_binary_not_quiet)
-                .set(0x23, execute_diff_patch_binary_zip_not_quiet)
-                .set(0x24, execute_diff_patch_binary_quiet)
-                .set(0x25, execute_diff_patch_binary_zip_quiet);
-        }
         self.add_subset(0xC7, &mut c7_handlers)
     }
 
@@ -657,6 +640,7 @@ impl Handlers {
                 .set(0xF3, execute_throwarganyif)
                 .set(0xF4, execute_throwanyifnot)
                 .set(0xF5, execute_throwarganyifnot)
+                .set(0xFE, execute_trykeep)
                 .set(0xFF, execute_try)
             )
             .set(0xF3, execute_tryargs)
@@ -852,6 +836,7 @@ impl Handlers {
                 .set(0x02, execute_buygas)
                 .set(0x04, execute_gramtogas)
                 .set(0x05, execute_gastogram)
+                .set(0x06, execute_gas_remaining)
                 .set(0x0F, execute_commit)
                 .set(0x10, execute_randu256)
                 .set(0x11, execute_rand)

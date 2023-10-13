@@ -60,7 +60,7 @@ macro_rules! boolean {
     };
 }
 
-#[derive(Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub enum StackItem {
     #[default]
     None,
@@ -70,6 +70,49 @@ pub enum StackItem {
     Integer(Arc<IntegerData>),
     Slice(SliceData),
     Tuple(Arc<Vec<StackItem>>)
+}
+
+impl Drop for StackItem {
+    fn drop(&mut self) {
+        if self.is_tuple() || self.is_continuation() {
+            let mut stack = vec!();
+            collect_items(&mut stack, self);
+            while let Some(ref mut item) = stack.pop() {
+                collect_items(&mut stack, item);
+            }
+        }
+    }
+}
+
+fn collect_items(stack: &mut Vec<StackItem>, item: &mut StackItem) {
+    match item {
+        StackItem::Tuple(data) => {
+            match Arc::try_unwrap(std::mem::take(data)) {
+                Ok(ref mut tuple) => {
+                    for item in tuple {
+                        stack.push(std::mem::take(item))
+                    }
+                }
+                Err(data) => drop(data)
+            }
+        }
+        StackItem::Continuation(data) => {
+            match Arc::try_unwrap(std::mem::take(data)) {
+                Ok(ref mut cont) => {
+                    for creg in [0, 1, 2, 3, 7] {
+                        if let Some(item) = cont.savelist.get_mut(creg) {
+                            stack.push(std::mem::take(item))
+                        }
+                    }
+                    for item in &mut cont.stack.storage {
+                        stack.push(std::mem::take(item))
+                    }
+                }
+                Err(data) => drop(data)
+            }
+        }
+        _ => ()
+    }
 }
 
 pub(crate) enum SerializeItem<'a> {
@@ -358,10 +401,8 @@ impl StackItem {
     /// Extracts builder to modify, exceptions should not be after
     /// If is single reference it will not clone on write
     pub fn as_builder_mut(&mut self) -> Result<BuilderData> {
-        self.as_builder()?;
-        match self.withdraw() {
-            StackItem::Builder(ref mut data) =>
-                Ok(mem::replace(Arc::make_mut(data), BuilderData::default())),
+        match self {
+            StackItem::Builder(data) => Ok(mem::take(Arc::make_mut(data))),
             _ => err!(ExceptionCode::TypeCheckError, "item is not a builder")
         }
     }
@@ -382,7 +423,7 @@ impl StackItem {
 
     pub fn as_continuation_mut(&mut self) -> ResultMut<ContinuationData> {
         match self {
-            StackItem::Continuation(ref mut data) => Ok(Arc::make_mut(data)),
+            StackItem::Continuation(data) => Ok(Arc::make_mut(data)),
             _ => err!(ExceptionCode::TypeCheckError, "item {} is not a continuation", self)
         }
     }
@@ -409,7 +450,7 @@ impl StackItem {
 
     pub fn as_integer_mut(&mut self) -> ResultMut<IntegerData> {
         match self {
-            StackItem::Integer(ref mut data) => Ok(Arc::make_mut(data)),
+            StackItem::Integer(data) => Ok(Arc::make_mut(data)),
             _ => err!(ExceptionCode::TypeCheckError, "item is not an integer")
         }
     }
@@ -456,9 +497,9 @@ impl StackItem {
 
     // Extracts tuple items
     pub fn withdraw_tuple_part(&mut self, length: usize) -> ResultVec<StackItem> {
-        match self.withdraw() {
+        match self {
             StackItem::Tuple(arc) => {
-                match Arc::try_unwrap(arc) {
+                match Arc::try_unwrap(mem::take(arc)) {
                     Ok(mut tuple) => {
                         tuple.truncate(length);
                         Ok(tuple)
@@ -483,6 +524,14 @@ impl StackItem {
 
     pub fn is_slice(&self) -> bool {
         matches!(self, StackItem::Slice(_))
+    }
+
+    pub fn is_tuple(&self) -> bool {
+        matches!(self, StackItem::Tuple(_))
+    }
+
+    pub fn is_continuation(&self) -> bool {
+        matches!(self, StackItem::Continuation(_))
     }
 
     pub fn withdraw(&mut self) -> StackItem {
@@ -753,21 +802,6 @@ impl StackItem {
                 Ok((StackItem::tuple(tuple), gas))
             },
             _ => err!(ExceptionCode::UnknownError)
-        }
-    }
-}
-
-#[rustfmt::skip]
-impl Clone for StackItem {
-    fn clone(&self) -> StackItem {
-        match self {
-            StackItem::None            => StackItem::None,
-            StackItem::Builder(x)      => StackItem::Builder(x.clone()),
-            StackItem::Cell(x)         => StackItem::Cell(x.clone()),
-            StackItem::Continuation(x) => StackItem::Continuation(x.clone()),
-            StackItem::Integer(x)      => StackItem::Integer(x.clone()),
-            StackItem::Slice(x)        => StackItem::Slice(x.clone()),
-            StackItem::Tuple(x)        => StackItem::Tuple(x.clone()),
         }
     }
 }

@@ -35,8 +35,6 @@ mod dump;
 mod null;
 mod config;
 mod rand;
-#[cfg(feature = "gosh")]
-mod diff;
 
 pub use engine::*;
 use smallvec::smallvec;

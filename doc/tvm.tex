@@ -1645,22 +1645,6 @@ Most of these ``other comparison'' primitives actually compare the data portions
 \item {\tt C713} --- {\tt SDCNTTRAIL1} ($s$ -- $n$), returns the number of trailing ones in $s$.
 \end{itemize}
 
-\nxsubpoint\emb{Diff operations (Only available in GOSH network)}
-\begin{itemize}
-\item {\tt C714} --- {\tt DIFF} ($c$ $c$ -- $c$), calculates diff between first and second parameters and returns it as cell.
-\item {\tt C715} --- {\tt DIFF\_PATCH} ($c$ $c$ -- $c$), takes the first parameter as document, the second parameter as patch, received on DIFF command, applies patch and saves result document to cell.
-\item {\tt C716} --- {\tt ZIP} ($c$ -- $c$), zip string to cell
-\item {\tt C717} --- {\tt UNZIP} ($c$ -- $c$), unzip cell to string
-\item {\tt C718} --- {\tt DIFF\_ZIP} ($c$ $c$ -- $c$), like DIFF but unzip parameters before operation and zip to cell after operation.
-\item {\tt C719} --- {\tt DIFF\_PATCH\_ZIP} ($c$ $c$ -- $c$), like DIFF\_PATCH but unzip parameters before operation and zip to cell after operation.
-\item {\tt C720} --- {\tt DIFF\_PATCHQ} ($c$ $c$ -- $c$), quiet version of DIFF\_PATCH
-\item {\tt C721} --- {\tt DIFF\_PATCH\_ZIPQ} ($c$ $c$ -- $c$), quiet version of DIFF\_PATCH\_ZIP
-\item {\tt C722} --- {\tt DIFF\_PATCH\_BINARY} ($c$ $c$ -- $c$), like DIFF\_PATCH but takes and returns binary arrays instead of string.
-\item {\tt C723} --- {\tt DIFF\_PATCH\_BINARY\_ZIP} ($c$ $c$ -- $c$), like DIFF\_PATCH\_ZIP but takes and returns binary arrays instead of string.
-\item {\tt C724} --- {\tt DIFF\_PATCH\_BINARYQ} ($c$ $c$ -- $c$), like DIFF\_PATCHQ but takes and returns binary arrays instead of string.
-\item {\tt C725} --- {\tt DIFF\_PATCH\_BINARY\_ZIPQ} ($c$ $c$ -- $c$), like DIFF\_PATCH\_ZIPQ but takes and returns binary arrays instead of string.
-\end{itemize}
-
 \mysubsection{Cell primitives}
 
 The cell primitives are mostly either {\em cell serialization primitives}, which work with {\em Builder\/}s, or {\em cell deserialization primitives}, which work with {\em Slice\/}s.
@@ -1991,6 +1975,7 @@ Most of the loop primitives listed below are implemented with the aid of extraor
 \begin{itemize}
 \item {\tt F2FF} --- {\tt TRY} ($c$ $c'$ -- ), sets {\tt c2} to $c'$, first saving the old value of {\tt c2} both into the savelist of $c'$ and into the savelist of the current continuation, which is stored into $c.{\tt c0}$ and $c'.{\tt c0}$. Then runs $c$ similarly to {\tt EXECUTE}. If $c$ does not throw any exceptions, the original value of {\tt c2} is automatically restored on return from $c$. If an exception occurs, the execution is transferred to $c'$, but the original value of {\tt c2} is restored in the process, so that $c'$ can re-throw the exception by {\tt THROWANY} if it cannot handle it by itself.
 \item {\tt F3$pr$} --- {\tt TRYARGS $p$,$r$} ($c$ $c'$ -- ), similar to {\tt TRY}, but with {\tt CALLARGS $p$,$r$} internally used instead of {\tt EXECUTE}. In this way, all but the top $0\leq p\leq 15$ stack elements will be saved into current continuation's stack, and then restored upon return from either $c$ or $c'$, with the top $0\leq r\leq 15$ values of the resulting stack of $c$ or $c'$ copied as return values.
+\item {\tt F2FE} --- {\tt TRYKEEP} ($c$ $c'$ -- ), similar to {\tt TRY}, but when an exception occurs, $c'$ receives all the stack slots populated upon entering $c$ with two exception arguments on top. All changes made by $c$ in those slots are kept and become visible to $c'$; all extra slots created by $c$ on top of the kept ones get discarded upon entering $c'$.
 \end{itemize}
 
 \mysubsection{Dictionary manipulation primitives}\label{p:prim.dict}
@@ -2224,7 +2209,8 @@ Of the following primitives, only the first two are ``pure'' in the sense that t
 \item {\tt F802} --- {\tt BUYGAS} ($x$ -- ), computes the amount of gas that can be bought for $x$ nanograms, and sets $g_l$ accordingly in the same way as {\tt SETGASLIMIT}.
 \item {\tt F804} --- {\tt GRAMTOGAS} ($x$ -- $g$), computes the amount of gas that can be bought for $x$ nanograms. If $x$ is negative, returns 0. If $g$ exceeds $2^{63}-1$, it is replaced with this value.
 \item {\tt F805} --- {\tt GASTOGRAM} ($g$ -- $x$), computes the price of $g$ gas in nanograms.
-\item {\tt F806}--{\tt F80E} --- Reserved for gas-related primitives.
+\item {\tt F806} --- {\tt GASREMAINING} ( -- $g$), returns the remaining gas $g_r$.
+\item {\tt F807}--{\tt F80E} --- Reserved for gas-related primitives.
 \item {\tt F80F} --- {\tt COMMIT} ( -- ), commits the current state of registers {\tt c4} (``persistent data'') and {\tt c5} (``actions'') so that the current execution is considered ``successful'' with the saved values even if an exception is thrown later.
 \end{itemize}
 

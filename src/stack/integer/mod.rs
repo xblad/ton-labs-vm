@@ -366,7 +366,7 @@ pub mod utils {
         if modpow2.is_zero() {
             return res
         }
-        (res + 1) as usize
+        res + 1
     }
 
     /// Perform in-place two's complement of the given digit iterator

@@ -46,7 +46,7 @@ fn dump_var_impl(item: &StackItem, how: u8, in_tuple: bool) -> String {
             StackItem::Cell(x)         => format!("C<{:X}>", x),
             StackItem::Continuation(x) => format!("R<{:X}>", x.code().cell()),
             StackItem::Integer(x)      => format!("{:X}", Arc::as_ref(x)),
-            StackItem::Slice(x)        => format!("CS<{:X}>({}..{})", &x.cell(), x.pos(), x.pos() + x.remaining_bits()),
+            StackItem::Slice(x)        => format!("CS<{:X}>({}..{})", x, x.pos(), x.pos() + x.remaining_bits()),
             StackItem::Tuple(x)        => dump_tuple_impl(x, how, in_tuple),
         }
     } else if how.bit(BIN) {
